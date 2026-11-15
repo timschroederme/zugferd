@@ -42,7 +42,8 @@ def main() -> None:
     ap.add_argument("-o", "--out", help="Ausgabe-PDF oder -Ordner (Standard: Name der Word-Datei mit .pdf, "
                                          "im selben Ordner)")
     ap.add_argument("--xml-out", help="erzeugtes XML zusätzlich speichern")
-    ap.add_argument("-q", "--quiet", action="store_true", help="Übersicht der Rechnungsbestandteile nicht ausgeben")
+    ap.add_argument("-q", "--quiet", "--silent", action="store_true",
+                    help="Übersicht der Rechnungsbestandteile (BT/BG) nicht ausgeben")
     a = ap.parse_args()
     if a.datei and a.docx:
         ap.error("Word-Datei bitte nur einmal angeben")

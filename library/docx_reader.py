@@ -151,7 +151,8 @@ def extract_from_docx(path: str) -> dict:
     if mm := re.search(r"(?:Steuer-?\s*Nr\.?|Steuernummer|Tax\s*(?:ID|No\.?|Number))\s*:?\s*(\d[\d/ ]{5,19}\d)", full, re.I):
         seller["BT-32"] = mm.group(1).strip()
     for src in (headtxt, full):   # eigene USt-IdNr. zuerst im Briefkopf (im Text kann die des Kunden stehen)
-        if (mm := re.search(r"(?:USt\.?-?\s*Id\.?-?\s*Nr\.?|VAT\s*(?:ID|No\.?|Reg\.?\s*No\.?)|UID)\s*:?\s*(DE\s?\d{9})", src, re.I)
+        if (mm := re.search(r"(?i:USt\.?-?\s*Id\.?-?\s*Nr\.?|VAT\s*(?:ID|No\.?|Reg\.?\s*No\.?)|UID)[ \t]*:?[ \t]*"
+                            r"([A-Z]{2}(?: ?[0-9A-Z]){2,14})(?![0-9A-Za-z])", src)
                 or re.search(r"\b(DE\d{9})\b", src)):
             seller["BT-31"] = mm.group(1).replace(" ", "")
             break
