@@ -1,0 +1,15 @@
+# Python-Pakete für zugferd_embed.py
+# Installation:  pip install -r requirements.txt
+# Getestet mit:  pikepdf 10.16, lxml 6.1, python-docx 1.2, pypdfium2 5.13, factur-x 7.9 (Python 3.13)
+#
+# Außerdem erforderlich (kein pip): LibreOffice  –  macOS: brew install --cask libreoffice
+# Optional (kein pip):             Ghostscript  –  macOS: brew install ghostscript
+#                                  (nur für --pdf mit einer PDF, die noch kein PDF/A-3 ist)
+
+pikepdf>=8.0          # PDF lesen/schreiben, XML-Anhang und Metadaten einbetten
+lxml>=4.9             # XML erzeugen, Word-Datei auswerten
+python-docx>=1.0      # Tabellen der Word-Rechnung lesen
+pypdfium2>=5.0,<6     # Position des Adressfelds in der PDF messen (API ab Version 5)
+
+# optional: Prüfung des erzeugten XML gegen das offizielle ZUGFeRD-/Factur-X-Schema
+factur-x>=3.0

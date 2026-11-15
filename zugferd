@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""
+ZUGFeRD-/Factur-X-Hybridrechnung aus einer Word-Rechnung erzeugen.
+
+Aufruf:
+  python3 zugferd_embed.py rechnung          (Endung .docx kann entfallen; --docx rechnung.docx geht weiterhin)
+  -> erzeugt rechnung.pdf im selben Ordner wie die Word-Datei (eine vorhandene Datei wird überschrieben)
+
+Die Rechnungsdaten werden aus der Word-Rechnung gelesen (deutsch oder englisch); daraus entsteht das
+ZUGFeRD-XML (Profil EN 16931). MwSt.-Aufschlüsselung und Summen werden aus den Positionen berechnet
+und mit den Summen im Dokument abgeglichen. LibreOffice erzeugt aus der Word-Datei das PDF/A-3, in das
+das XML eingebettet wird.
+
+Optionen:
+  -o datei.pdf | ordner/      anderer Name bzw. anderer Zielordner für die PDF
+  --soffice /pfad/zu/soffice  nur nötig, falls die automatische Suche eine andere Installation findet
+  --pdf datei.pdf             statt der LibreOffice-Umwandlung ein vorhandenes PDF verwenden
+                              (ist es noch kein PDF/A-3, wird es mit Ghostscript umgewandelt)
+  --xml-out datei.xml         erzeugtes XML zusätzlich speichern
+  -q                          Übersicht der erkannten Rechnungsbestandteile nicht ausgeben
+
+Voraussetzungen: pip install pikepdf lxml python-docx pypdfium2 (optional: factur-x für die XSD-Prüfung);
+LibreOffice; Ghostscript nur für --pdf mit einem PDF, das noch kein PDF/A-3 ist.
+
+Die eigentliche Verarbeitung liegt im Verzeichnis library/ (siehe library/__init__.py).
+"""
+
+import argparse
+import os
+import sys
+
+from library.errors import InvoiceError
+from library.pipeline import create_hybrid_invoice, default_output_path
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="ZUGFeRD-Hybridrechnung aus einer Word-Rechnung erzeugen")
+    ap.add_argument("datei", nargs="?", help="Word-Rechnung (Endung .docx kann entfallen)")
+    ap.add_argument("--docx", help="Word-Rechnung (alternative Schreibweise)")
+    ap.add_argument("--pdf", help="vorhandenes PDF verwenden (statt Word -> PDF mit LibreOffice)")
+    ap.add_argument("--soffice", help="LibreOffice-Programm vorgeben (sonst automatische Suche)")
+    ap.add_argument("-o", "--out", help="Ausgabe-PDF oder -Ordner (Standard: Name der Word-Datei mit .pdf, "
+                                         "im selben Ordner)")
+    ap.add_argument("--xml-out", help="erzeugtes XML zusätzlich speichern")
+    ap.add_argument("-q", "--quiet", action="store_true", help="Übersicht der Rechnungsbestandteile nicht ausgeben")
+    a = ap.parse_args()
+    if a.datei and a.docx:
+        ap.error("Word-Datei bitte nur einmal angeben")
+    a.docx = resolve_docx(a.datei or a.docx or ap.error("Word-Datei angeben, z. B.: zugferd rechnung"))
+    check_inputs(a)
+    out = default_output_path(a.docx, a.out)
+    create_hybrid_invoice(a.docx, out, pdf_in=a.pdf, soffice=a.soffice, xml_out=a.xml_out, show=not a.quiet)
+    print("All done.")
+
+
+def resolve_docx(name: str) -> str:
+    """'re1' -> 're1.docx', falls es nur die Datei mit Endung gibt."""
+    if not os.path.isfile(name) and not name.lower().endswith(".docx") and os.path.isfile(name + ".docx"):
+        return name + ".docx"
+    return name
+
+
+def check_inputs(a) -> None:
+    """Prüft Eingabedateien vorab und nennt bei Fehlern den genauen Pfad samt Alternativen."""
+    for flag, path in (("--docx", a.docx), ("--pdf", a.pdf)):
+        if path and not os.path.isfile(path):
+            ext = os.path.splitext(path)[1].lower() or ".docx"
+            here = sorted(f for f in os.listdir(os.getcwd()) if f.lower().endswith(ext))
+            sys.exit(f"Datei für {flag} nicht gefunden: {os.path.abspath(path)}\n"
+                     f"Aktuelles Verzeichnis: {os.getcwd()}\n"
+                     f"Vorhandene {ext}-Dateien hier: {', '.join(here) or '(keine)'}")
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except InvoiceError as e:
+        sys.exit(str(e))
+    except FileNotFoundError as e:
+        sys.exit(f"Datei oder Programm nicht gefunden: {e.filename!r}\n"
+                 f"(Aktuelles Verzeichnis: {os.getcwd()})\nVollständige Meldung: {e}")
